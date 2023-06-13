@@ -60,7 +60,7 @@ This repo uses the TensorFlow Datasets version of the [CycleGAN datasets]. See [
 
 #### Installation
   ```
-    git clone https://github.com/jaxtooth/CycleGAN-Flax
+    git clone https://github.com/louwjac/CycleGAN-Flax
     cd CycleGAN-Flax
     pip install -r requirements.txt
   ```
