@@ -1,0 +1,2 @@
+This is the default location where model checkpoints and tensorboard traces will be saved during training. Checkpoints for models trained on the horse2zebra and monet2photo datasets have been made available on Huggingface at https://huggingface.co/louwjac/CycleGAN-Flax. 
+See the Colab [inference demo](https://colab.research.google.com/github/louwjac/CycleGAN-Flax/blob/main/notebooks/inference.ipynb) for an example of how to load the weights. 

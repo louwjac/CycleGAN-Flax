@@ -1,0 +1,103 @@
+# Macros:
+# ==============================================================================
+dataset_name = 'summer2winter_yosemite'
+work_dir = '/models/A' 
+tfds_download_dir = '/d_drive/datasets'
+epochs = 200
+fake_buffer_size = 50
+device_batch_size = 1     #batch size to be applied to each device (gpu/tpu)
+identity_flag = True      #compute identity loss for the generators
+shuffle_size = 32         #size of the buffer used to shuffle images in the input pipeline
+
+utils.KeyGen.seed=100
+
+
+# Parameters for schedules:
+# ==============================================================================
+gen_lr/linear_schedule.init_value = .0002
+gen_lr/linear_schedule.end_value = 0.
+gen_lr/linear_schedule.transition_steps = 107000
+gen_lr/linear_schedule.transition_begin = 107000
+
+disc_lr/linear_schedule.init_value = .0002
+disc_lr/linear_schedule.end_value = 0.
+disc_lr/linear_schedule.transition_steps = 107000
+disc_lr/linear_schedule.transition_begin = 107000
+
+gen_lr_schedule = @gen_lr/linear_schedule()
+disc_lr_schedule = @disc_lr/linear_schedule()
+
+
+# Parameters for train_prep_fn:
+# ==============================================================================
+data.train_prep_fn.jitter_height = 286
+data.train_prep_fn.jitter_margin = 30
+data.train_prep_fn.jitter_width = 286
+data.train_prep_fn.out_height = 256
+data.train_prep_fn.out_width = 256
+
+
+# Parameters for create_stream:
+# ==============================================================================
+data.create_stream.ds_name = %dataset_name
+data.create_stream.download_dir = %tfds_download_dir
+data.create_stream.batch_size = %device_batch_size
+data.create_stream.shuffle_size = %shuffle_size #set to zero to disable shuffling
+data.create_stream.prep_fn = @data.train_prep_fn() #use the data.eval_prep_fn() to create an evaluation stream
+
+
+# Parameters for get_generator_forward_fn:
+# ==============================================================================
+train.generator_forward_fn.adv_loss_fn = @train.calc_mse
+train.generator_forward_fn.id_loss_fn = @train.calc_mae
+train.generator_forward_fn.cycle_loss_fn = @train.calc_mae
+train.generator_forward_fn.id_scalar = 5.
+train.generator_forward_fn.cycle_scalar = 10.
+train.generator_forward_fn.lr_schedule = %gen_lr_schedule
+
+
+# Parameters for discriminator_forward_fn:
+# ==============================================================================
+train.discriminator_forward_fn.loss_fn = @train.calc_mse
+train.discriminator_forward_fn.lr_schedule = %disc_lr_schedule
+
+# Parameters for CycleDiscriminator:
+# ==============================================================================
+models.Discriminator.use_sigmoid = False
+models.CycleDiscriminator.base_model = @models.Discriminator
+
+# Parameters for CycleGenerator:
+# ==============================================================================
+models.ResnetGenerator.residuals = 9
+models.ResnetGenerator.features = 64
+models.CycleGenerator.base_model = @models.ResnetGenerator
+
+# Parameters for optimizers:
+# ==============================================================================
+optimizers.generator_original.lr_schedule = %gen_lr_schedule
+optimizers.generator_original.b1 = 0.5
+optimizers.generator_original.b2 = 0.999
+
+optimizers.discriminator_original.lr_schedule = %disc_lr_schedule
+optimizers.discriminator_original.b1 = 0.5
+optimizers.discriminator_original.b2 = 0.999
+
+# Parameters for train.loop.create:
+# ==============================================================================
+train.create_loop.loop_class = @train.TrainLoop
+train.create_loop.generator = @models.CycleGenerator()
+train.create_loop.discriminator = @models.CycleDiscriminator()
+train.create_loop.optimizer_gen = @optimizers.generator_original()
+train.create_loop.optimizer_disc = @optimizers.discriminator_original()
+
+
+train.create_loop.epochs = %epochs
+train.create_loop.work_dir = %work_dir
+train.create_loop.ckpt_keep = 25
+train.create_loop.metrics_steps = 100
+train.create_loop.progress_steps = 100
+train.create_loop.images_steps = 500
+train.create_loop.checkpoint_steps = 5000
+train.create_loop.fake_buffer_size = %fake_buffer_size
+
+models.configured.assets = @models.CycleGenerator()
